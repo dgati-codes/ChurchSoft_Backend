@@ -1,25 +1,16 @@
 # Build stage
-FROM maven:3.9.9-eclipse-temurin-25 AS builder
+FROM maven:3.9.9-openjdk-21 AS builder
 
 WORKDIR /app
 
-# Copy POM and download dependencies first (for caching)
-COPY pom.xml .
-COPY mvnw .
-COPY .mvn .mvn
-RUN mvn dependency:go-offline -B
-
-# Copy source code
-COPY src ./src
+# Copy project files
+COPY . .
 
 # Build the application
 RUN mvn clean package -DskipTests
 
 # Runtime stage
-FROM eclipse-temurin:25-jre-jammy
-
-RUN groupadd -r springuser && useradd -r -g springuser -u 1001 springuser
-USER springuser
+FROM openjdk:21-jre-slim
 
 WORKDIR /app
 
