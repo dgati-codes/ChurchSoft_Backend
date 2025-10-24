@@ -1,41 +1,37 @@
 # ==============================
-# 1️⃣ BUILD STAGE
+# BUILD STAGE
 # ==============================
-FROM eclipse-temurin:25-jdk-jammy AS builder
+FROM maven:3.9.9-eclipse-temurin-25 AS builder
 
 WORKDIR /app
 
-# Copy Maven wrapper and pom.xml first (for caching dependencies)
+# Copy POM first for dependency caching
+COPY pom.xml .
 COPY mvnw .
 COPY .mvn .mvn
-COPY pom.xml .
 
-# Make wrapper executable and pre-download dependencies
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
+# Download dependencies
+RUN mvn dependency:go-offline -B
 
-# Now copy the source code
+# Copy source code
 COPY src ./src
 
-# Build the application JAR (skip tests for speed)
-RUN ./mvnw clean package -DskipTests
-
+# Build application
+RUN mvn clean package -DskipTests
 
 # ==============================
-# 2️⃣ RUNTIME STAGE
+# RUNTIME STAGE
 # ==============================
-FROM eclipse-temurin:25-jre-jammy AS runtime
+FROM eclipse-temurin:25-jre-jammy
 
-# Create a non-root user for security
-RUN useradd -r -u 1001 springuser
+RUN groupadd -r springuser && useradd -r -g springuser -u 1001 springuser
 USER springuser
 
 WORKDIR /app
 
-# Copy the JAR from the builder stage
-COPY --from=builder /app/target/*.jar app.jar
+# Copy the built JAR
+COPY --from=builder /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar app.jar
 
-# Expose port for Render
 EXPOSE 9009
 
-# Start the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
