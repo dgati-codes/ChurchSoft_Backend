@@ -1,21 +1,13 @@
-# Build stage
-FROM maven:3.9.9-openjdk-21 AS builder
+FROM openjdk:21-jdk-slim
 
 WORKDIR /app
 
 # Copy project files
 COPY . .
 
-# Build the application
-RUN mvn clean package -DskipTests
-
-# Runtime stage
-FROM openjdk:21-jre-slim
-
-WORKDIR /app
-
-COPY --from=builder /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar app.jar
+# Build and run in one stage
+RUN ./mvnw clean package -DskipTests
 
 EXPOSE 9009
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar"]
