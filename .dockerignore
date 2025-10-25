@@ -1,10 +1,22 @@
+# Ignore build artifacts
 target/
+*.jar
+*.war
+*.log
+
+# Ignore version control and IDE files
 .git/
 .gitignore
-README.md
 .idea/
 .vscode/
+
+# Node / frontend stuff (if any)
 node_modules/
 build/
+
+# Env files
 .env
-target/
+
+# System
+.DS_Store
+Thumbs.db
