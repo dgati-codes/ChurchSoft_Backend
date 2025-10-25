@@ -12,6 +12,9 @@ COPY src ./src
 # Build the application
 RUN mvn clean package -DskipTests
 
+# Debug: List the JAR contents to verify main class
+RUN jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep ChurchSoftBackendApplication
+
 # ==============================
 # RUNTIME STAGE
 # ==============================
