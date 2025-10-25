@@ -1,41 +1,31 @@
 # ==============================
-# 1️⃣ BUILD STAGE
+# BUILD STAGE
 # ==============================
-FROM openjdk:17-jdk-alpine AS builder
+FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
 
-RUN apk add --no-cache curl tar bash procps
-
-# Install Maven
-ARG MAVEN_VERSION=3.9.6
-ARG BASE_URL=https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries
-RUN mkdir -p /usr/share/maven /usr/share/maven/ref \
- && curl -fsSL -o /tmp/maven.tar.gz ${BASE_URL}/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
- && tar -xzf /tmp/maven.tar.gz -C /usr/share/maven --strip-components=1 \
- && ln -s /usr/share/maven/bin/mvn /usr/bin/mvn
-
-ENV MAVEN_HOME /usr/share/maven
 WORKDIR /app
 
-# Copy pom.xml and pre-download dependencies
-COPY pom.xml ./
-RUN mvn dependency:go-offline -B
-
-# Copy all source files
+# Copy pom.xml and source code
+COPY pom.xml .
 COPY src ./src
 
-# Debug: confirm files exist
-RUN echo "==== Checking copied sources ====" && ls -R src/main/java | head -n 30
-
-# Build Spring Boot JAR
+# Build the application
 RUN mvn clean package -DskipTests
 
 # ==============================
-# 2️⃣ RUNTIME STAGE
+# RUNTIME STAGE
 # ==============================
-FROM openjdk:17-jdk-alpine
+FROM eclipse-temurin:17-jre-alpine
+
 WORKDIR /app
 
-COPY --from=builder /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar .
+# Copy the built JAR from builder stage
+COPY --from=builder /app/target/*.jar app.jar
+
+# Create a non-root user to run the application
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring
 
 EXPOSE 9009
-ENTRYPOINT ["java", "-jar", "ChurchSoft_Backend-0.0.1-SNAPSHOT.jar"]
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
