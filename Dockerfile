@@ -5,18 +5,21 @@ FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
 
 WORKDIR /app
 
-# Copy pom.xml and source code
-COPY pom.xml .
-COPY src ./src
+# Copy ALL project files first
+COPY . .
+
+# Debug: List files to verify everything is copied
+RUN echo "=== Project structure ===" && \
+    ls -la && \
+    echo "=== Source files ===" && \
+    find src -name "*.java" | head -20
 
 # Build the application
 RUN mvn clean package -DskipTests
 
-# Debug: Check JAR structure
-RUN echo "=== Checking JAR contents ===" && \
-    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep -i churchsoft && \
-    echo "=== Checking BOOT-INF classes ===" && \
-    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep BOOT-INF/classes
+# Debug: Check the actual JAR contents (without grep failures)
+RUN echo "=== Full JAR contents ===" && \
+    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | head -50
 
 # ==============================
 # RUNTIME STAGE
@@ -27,9 +30,6 @@ WORKDIR /app
 
 # Copy the built JAR from builder stage
 COPY --from=builder /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar app.jar
-
-# Debug: Verify the JAR in runtime image
-RUN jar tf app.jar | grep -i churchsoft
 
 EXPOSE 9009
 
