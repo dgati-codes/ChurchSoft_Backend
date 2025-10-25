@@ -1,48 +1,56 @@
-
-# Stage 1: Build the application
+# ==============================
+# 1️⃣ BUILD STAGE
+# ==============================
 FROM openjdk:17-jdk-alpine AS builder
 
-# Install required packages
+# Install dependencies for Maven + general utilities
 RUN apk add --no-cache curl tar bash procps
 
-# Maven version and user home directory
-ARG MAVEN_VERSION=3.6.3
+# Define Maven version and download URL
+ARG MAVEN_VERSION=3.9.6
 ARG USER_HOME_DIR="/root"
 ARG BASE_URL=https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries
 
-# Install Maven
+# Install Maven manually
 RUN mkdir -p /usr/share/maven /usr/share/maven/ref \
  && curl -fsSL -o /tmp/apache-maven.tar.gz ${BASE_URL}/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
  && tar -xzf /tmp/apache-maven.tar.gz -C /usr/share/maven --strip-components=1 \
  && rm -f /tmp/apache-maven.tar.gz \
- && cp -s /usr/share/maven/bin/mvn /usr/bin/mvn
+ && ln -s /usr/share/maven/bin/mvn /usr/bin/mvn
 
-# Set environment variables for Maven
+# Set Maven environment
 ENV MAVEN_HOME /usr/share/maven
 ENV MAVEN_CONFIG "$USER_HOME_DIR/.m2"
 
-# Set work directory
+# Work directory for the build
 WORKDIR /app
 
-# Copy pom.xml and download dependencies (to cache this step)
+# Copy only the pom.xml first (to leverage Docker cache for dependencies)
 COPY pom.xml ./
-RUN mvn dependency:go-offline
+RUN mvn dependency:go-offline -B
 
-# Copy the source code and build the application
+# Copy source code
 COPY src ./src
-RUN mvn clean install
 
-# Stage 2: Create the final image
+# ✅ Optional debug: confirm source files copied
+RUN echo "==== Source files in container ====" && ls -R src/main/java | head -n 50
+
+# Build the Spring Boot JAR (skip tests to speed up build)
+RUN mvn clean package -DskipTests
+
+# ==============================
+# 2️⃣ RUNTIME STAGE
+# ==============================
 FROM openjdk:17-jdk-alpine
 
-# Set work directory
+# Working directory in the runtime image
 WORKDIR /app
 
-# Copy the jar file from the build stage
+# Copy built JAR from builder stage
 COPY --from=builder /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar .
 
-# Expose the application port
+# Expose your app port
 EXPOSE 9009
 
-# Command to run the application
-CMD ["java", "-jar", "ChurchSoft_Backend-0.0.1-SNAPSHOT.jar"]
+# Command to run the app
+ENTRYPOINT ["java", "-jar", "ChurchSoft_Backend-0.0.1-SNAPSHOT.jar"]
