@@ -12,8 +12,11 @@ COPY src ./src
 # Build the application
 RUN mvn clean package -DskipTests
 
-# Debug: List the JAR contents to verify main class
-RUN jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep ChurchSoftBackendApplication
+# Debug: Check JAR structure
+RUN echo "=== Checking JAR contents ===" && \
+    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep -i churchsoft && \
+    echo "=== Checking BOOT-INF classes ===" && \
+    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep BOOT-INF/classes
 
 # ==============================
 # RUNTIME STAGE
@@ -23,11 +26,10 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # Copy the built JAR from builder stage
-COPY --from=builder /app/target/*.jar app.jar
+COPY --from=builder /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar app.jar
 
-# Create a non-root user to run the application
-RUN addgroup -S spring && adduser -S spring -G spring
-USER spring
+# Debug: Verify the JAR in runtime image
+RUN jar tf app.jar | grep -i churchsoft
 
 EXPOSE 9009
 
