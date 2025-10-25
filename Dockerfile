@@ -5,21 +5,37 @@ FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
 
 WORKDIR /app
 
-# Copy ALL project files first
+# Copy ALL project files
 COPY . .
 
-# Debug: List files to verify everything is copied
-RUN echo "=== Project structure ===" && \
-    ls -la && \
-    echo "=== Source files ===" && \
-    find src -name "*.java" | head -20
+# Debug: Show complete project structure
+RUN echo "=== Complete project structure ===" && \
+    find . -type f -name "*.java" | head -30 && \
+    echo "=== Checking main class exists ===" && \
+    find . -name "ChurchSoftBackendApplication.java" && \
+    echo "=== Maven version ===" && \
+    mvn --version
 
-# Build the application
-RUN mvn clean package -DskipTests
+# Build with verbose output
+RUN mvn clean compile -DskipTests
 
-# Debug: Check the actual JAR contents (without grep failures)
-RUN echo "=== Full JAR contents ===" && \
-    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | head -50
+# Check if classes were compiled
+RUN echo "=== Checking compiled classes ===" && \
+    find target -name "*.class" | head -20
+
+# Now build the package
+RUN mvn package -DskipTests
+
+# Comprehensive JAR analysis
+RUN echo "=== JAR detailed analysis ===" && \
+    echo "JAR file size:" && \
+    ls -lh /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar && \
+    echo "=== Full JAR contents (first 100 lines) ===" && \
+    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | head -100 && \
+    echo "=== Checking for BOOT-INF ===" && \
+    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep BOOT-INF || echo "BOOT-INF not found!" && \
+    echo "=== Checking for main class ===" && \
+    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep ChurchSoftBackendApplication || echo "Main class not found!"
 
 # ==============================
 # RUNTIME STAGE
@@ -30,6 +46,9 @@ WORKDIR /app
 
 # Copy the built JAR from builder stage
 COPY --from=builder /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar app.jar
+
+# Verify JAR in runtime stage
+RUN jar tf app.jar | head -10
 
 EXPOSE 9009
 
