@@ -5,27 +5,18 @@ FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
 
 WORKDIR /app
 
-# Copy project files
-COPY . .
+# Copy pom.xml and source code
+COPY pom.xml .
+COPY src ./src
 
-# Debug: Show project structure
-RUN echo "=== Project Structure ===" && \
-    find src/main/java -name "*.java" | grep ChurchSoftBackendApplication
+# Build the application
+RUN mvn clean package -DskipTests
 
-# Clean and build
-RUN mvn clean compile -DskipTests
-
-# Verify compilation worked
-RUN echo "=== Compiled Classes ===" && \
-    find target/classes -name "ChurchSoftBackendApplication.class"
-
-# Create a proper executable JAR without Spring Boot repackaging
-RUN mvn package -DskipTests -Dspring-boot.repackage.skip=true
-
-# Create a simple executable JAR with proper manifest
-RUN jar tf target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar > /tmp/jar_contents.txt && \
-    echo "=== JAR Contents ===" && \
-    cat /tmp/jar_contents.txt | head -20
+# Debug: Check JAR structure
+RUN echo "=== Checking JAR contents ===" && \
+    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep -i churchsoft || true && \
+    echo "=== Checking BOOT-INF classes ===" && \
+    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep BOOT-INF/classes || true
 
 # ==============================
 # RUNTIME STAGE
@@ -34,9 +25,12 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
+# Copy the built JAR from builder stage
 COPY --from=builder /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar app.jar
+
+# Debug: Verify the JAR in runtime image
+RUN jar tf app.jar | grep -i churchsoft
 
 EXPOSE 9009
 
-# Use the exact classpath format that works
-ENTRYPOINT ["java", "-cp", "app.jar", "com.churchsoft.ChurchSoftBackendApplication"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
