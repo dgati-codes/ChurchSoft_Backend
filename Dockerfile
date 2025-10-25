@@ -5,37 +5,22 @@ FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
 
 WORKDIR /app
 
-# Copy ALL project files
-COPY . .
+# Copy pom.xml first for better caching
+COPY pom.xml .
 
-# Debug: Show complete project structure
-RUN echo "=== Complete project structure ===" && \
-    find . -type f -name "*.java" | head -30 && \
-    echo "=== Checking main class exists ===" && \
-    find . -name "ChurchSoftBackendApplication.java" && \
-    echo "=== Maven version ===" && \
-    mvn --version
+# Download dependencies first (better caching)
+RUN mvn dependency:go-offline -B
 
-# Build with verbose output
-RUN mvn clean compile -DskipTests
+# Copy source code
+COPY src ./src
 
-# Check if classes were compiled
-RUN echo "=== Checking compiled classes ===" && \
-    find target -name "*.class" | head -20
+# Build and create executable JAR
+RUN mvn clean package -DskipTests
 
-# Now build the package
-RUN mvn package -DskipTests
-
-# Comprehensive JAR analysis
-RUN echo "=== JAR detailed analysis ===" && \
-    echo "JAR file size:" && \
-    ls -lh /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar && \
-    echo "=== Full JAR contents (first 100 lines) ===" && \
-    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | head -100 && \
-    echo "=== Checking for BOOT-INF ===" && \
-    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep BOOT-INF || echo "BOOT-INF not found!" && \
-    echo "=== Checking for main class ===" && \
-    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep ChurchSoftBackendApplication || echo "Main class not found!"
+# Debug: Verify the JAR structure
+RUN ls -la target/ && \
+    echo "=== JAR contents ===" && \
+    jar tf target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep -E "(BOOT-INF|ChurchSoftBackendApplication)" | head -20
 
 # ==============================
 # RUNTIME STAGE
@@ -44,11 +29,11 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
+# Install jar command for debugging (optional)
+RUN apk add --no-cache openjdk17-jre-headless
+
 # Copy the built JAR from builder stage
 COPY --from=builder /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar app.jar
-
-# Verify JAR in runtime stage
-RUN jar tf app.jar | head -10
 
 EXPOSE 9009
 
