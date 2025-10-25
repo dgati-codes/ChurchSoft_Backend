@@ -11,8 +11,6 @@
 ### IntelliJ IDEA ###
 .idea/
 *.iml
-*.ipr
-*.iws
 out/
 
 ### Eclipse ###
