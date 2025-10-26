@@ -9,14 +9,8 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 
-# Build the application
+# Build the application (repacks into executable fat JAR)
 RUN mvn clean package -DskipTests
-
-# Debug: Check JAR structure
-RUN echo "=== Checking JAR contents ===" && \
-    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep -i churchsoft || true && \
-    echo "=== Checking BOOT-INF classes ===" && \
-    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep BOOT-INF/classes || true
 
 # ==============================
 # RUNTIME STAGE
@@ -27,9 +21,6 @@ WORKDIR /app
 
 # Copy the built JAR from builder stage
 COPY --from=builder /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar app.jar
-
-# Debug: Verify the JAR in runtime image
-RUN jar tf app.jar | grep -i churchsoft
 
 EXPOSE 9009
 
