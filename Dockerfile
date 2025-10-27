@@ -4,11 +4,19 @@ WORKDIR /app
 
 COPY . .
 
-# Build without Spring Boot plugin interference
-RUN mvn clean package -DskipTests -Dspring-boot.repackage.skip=true
+# Debug: Show project structure
+RUN echo "=== Project Structure ===" && find . -name "*.java" | head -20
 
-# Check the JAR structure
-RUN jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar
+# Build
+RUN mvn clean package -DskipTests
+
+# Debug: Check JAR contents
+RUN echo "=== JAR Contents ===" && \
+    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep -i churchsoft || echo "No ChurchSoft classes found!"
+
+# Debug: Check BOOT-INF contents
+RUN echo "=== BOOT-INF Classes ===" && \
+    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep BOOT-INF/classes | head -10
 
 FROM eclipse-temurin:17-jre-jammy
 
@@ -18,5 +26,4 @@ COPY --from=build /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar app.jar
 
 EXPOSE 8080
 
-# Use explicit classpath execution
-ENTRYPOINT ["java", "-cp", "app.jar", "org.springframework.boot.loader.JarLauncher"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
