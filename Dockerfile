@@ -1,23 +1,28 @@
+# ===============================
+# Stage 1: Build the Spring Boot application
+# ===============================
 FROM maven:3.9.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
+# Copy everything
 COPY . .
 
-# Debug: Show project structure
-RUN echo "=== Project Structure ===" && find . -name "*.java" | head -20
+# Create resources directory if it doesn't exist (for Render build)
+RUN mkdir -p src/main/resources
 
-# Build
-RUN mvn clean package -DskipTests
+# First compile the source code explicitly
+RUN mvn compile -DskipTests
 
-# Debug: Check JAR contents
-RUN echo "=== JAR Contents ===" && \
-    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep -i churchsoft || echo "No ChurchSoft classes found!"
+# Then build the package
+RUN mvn package -DskipTests
 
-# Debug: Check BOOT-INF contents
-RUN echo "=== BOOT-INF Classes ===" && \
-    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | grep BOOT-INF/classes | head -10
+# Verify the JAR contains our classes
+RUN jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | head -20
 
+# ===============================
+# Stage 2: Run the built JAR
+# ===============================
 FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
