@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: churchsoft-backend
+    runtime: java
+    plan: free
+
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/*.jar
+
+    healthCheckPath: /actuator/health
+
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SERVER_PORT
+        value: 9009
+      - key: JAVA_OPTS
+        value: "-Xmx512m -Xms256m"
+
+      # Database credentials (to be set securely in Render)
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+      # AWS S3 credentials
+      - key: AWS_S3_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_SECRET_KEY
+        sync: false
+      - key: AWS_S3_BUCKET_NAME
+        sync: false
+      - key: AWS_REGION
+        sync: false
+
+      # JWT security keys
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRATION
+        value: 86400000
