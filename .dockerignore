@@ -1,5 +1,3 @@
-
-# Ignore compiled artifacts and build cache
 target/
 .git/
 .gitignore
