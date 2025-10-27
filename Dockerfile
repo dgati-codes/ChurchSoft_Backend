@@ -1,37 +1,27 @@
+# Use an official Maven image to build the Spring app
+FROM maven:3.8.4-openjdk-17 AS build
 
-# ==============================
-# BUILD STAGE
-# ==============================
-FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
-
+# Set the working directory
 WORKDIR /app
 
-# Copy ALL project files first
-COPY . .
+# Copy the pom.xml and install dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline
 
-# Debug: List files to verify everything is copied
-RUN echo "=== Project structure ===" && \
-    ls -la && \
-    echo "=== Source files ===" && \
-    find src -name "*.java" | head -20
-
-# Build the application
+# Copy the source code and build the application
+COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Debug: Check the actual JAR contents (without grep failures)
-RUN echo "=== Full JAR contents ===" && \
-    jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | head -50
+# Use an official OpenJDK image to run the application
+FROM openjdk:17-jdk-slim
 
-# ==============================
-# RUNTIME STAGE
-# ==============================
-FROM eclipse-temurin:17-jre-alpine
-
+# Set the working directory
 WORKDIR /app
 
-# Copy the built JAR from builder stage
-COPY --from=builder /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar app.jar
+# Copy the built JAR file from the build stage
+COPY --from=build /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar .
 
-EXPOSE 9009
+#Expose port 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Specify the command to run the application
+ENTRYPOINT ["java", "-jar", "/app/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar"]
