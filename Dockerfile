@@ -1,27 +1,12 @@
-# Use an official Maven image to build the Spring app
+# Stage 1: Build the Spring Boot application
 FROM maven:3.8.4-openjdk-17 AS build
-
-# Set the working directory
 WORKDIR /app
-
-# Copy the pom.xml and install dependencies
-COPY pom.xml .
-RUN mvn dependency:go-offline
-
-# Copy the source code and build the application
-COPY src ./src
+COPY . .
 RUN mvn clean package -DskipTests
 
-# Use an official OpenJDK image to run the application
+# Stage 2: Run the built JAR
 FROM openjdk:17-jdk-slim
-
-# Set the working directory
 WORKDIR /app
-
-# Copy the built JAR file from the build stage
-COPY --from=build /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar .
-
-#Expose port 8080
-
-# Specify the command to run the application
-ENTRYPOINT ["java", "-jar", "/app/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar"]
+COPY --from=build /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

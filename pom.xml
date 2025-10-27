@@ -11,7 +11,7 @@
 	<groupId>com.churchsoft</groupId>
 	<artifactId>ChurchSoft_Backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>ChurchSoft_Bankend</name>
+	<name>ChurchSoft_Backend</name>
 	<description>ERP For Member and Finance Management</description>
 	<url/>
 	<licenses>
@@ -27,7 +27,7 @@
 		<url/>
 	</scm>
 	<properties>
-		<java.version>25</java.version>
+		<java.version>17</java.version>
 	</properties>
 	<dependencies>
 		<dependency>

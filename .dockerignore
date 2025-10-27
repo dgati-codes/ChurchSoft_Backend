@@ -1,0 +1,8 @@
+
+# Ignore compiled artifacts and build cache
+target/
+.git/
+.gitignore
+.DS_Store
+.idea/
+*.iml
