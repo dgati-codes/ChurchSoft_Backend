@@ -3,11 +3,10 @@ services:
     name: churchsoft-backend
     runtime: java
     plan: free
+    region: frankfurt  # or oregon/singapore depending on your location
 
     buildCommand: ./mvnw clean package -DskipTests
     startCommand: java -jar target/*.jar
-
-    healthCheckPath: /actuator/health
 
     envVars:
       - key: SPRING_PROFILES_ACTIVE
@@ -17,7 +16,7 @@ services:
       - key: JAVA_OPTS
         value: "-Xmx512m -Xms256m"
 
-      # Database credentials (to be set securely in Render)
+      # Database credentials (set securely in Render Dashboard)
       - key: DB_URL
         sync: false
       - key: DB_USERNAME
@@ -40,3 +39,6 @@ services:
         sync: false
       - key: JWT_EXPIRATION
         value: 86400000
+
+    healthCheckPath: /actuator/health
+    autoDeploy: true
