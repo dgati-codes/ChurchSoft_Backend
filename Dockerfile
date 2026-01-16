@@ -3,18 +3,18 @@ FROM maven:3.9.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-# Copy only the files needed for dependency resolution first
+# Copy only Maven files first to leverage caching
 COPY pom.xml .
 COPY mvnw .
 COPY .mvn .mvn
 
-# Install dependencies separately (Docker layer caching)
+# Download dependencies
 RUN mvn dependency:go-offline -B
 
 # Copy source code
 COPY src ./src
 
-# Build the fat/executable JAR in one step
+# Build the JAR
 RUN mvn clean package -DskipTests
 
 # Stage 2: Run the built JAR
