@@ -3,10 +3,13 @@ FROM maven:3.9.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-# Copy Maven config first to leverage caching
+# Copy only the files needed for dependency resolution first
 COPY pom.xml .
 COPY mvnw .
 COPY .mvn .mvn
+
+# Install dependencies separately (Docker layer caching)
+RUN mvn dependency:go-offline -B
 
 # Copy source code
 COPY src ./src
