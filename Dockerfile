@@ -1,23 +1,18 @@
-
 # Stage 1: Build the Spring Boot application
 FROM maven:3.9.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-# Copy everything
-COPY . .
+# Copy Maven config first to leverage caching
+COPY pom.xml .
+COPY mvnw .
+COPY .mvn .mvn
 
-# Create resources directory if it doesn't exist (for Render build)
-RUN mkdir -p src/main/resources
+# Copy source code
+COPY src ./src
 
-# First compile the source code explicitly
-RUN mvn compile -DskipTests
-
-# Then build the package
-RUN mvn package -DskipTests
-
-# Verify the JAR contains our classes
-RUN jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | head -20
+# Build the fat/executable JAR in one step
+RUN mvn clean package -DskipTests
 
 # Stage 2: Run the built JAR
 FROM eclipse-temurin:17-jre-jammy
