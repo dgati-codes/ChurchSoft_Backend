@@ -3,19 +3,20 @@ FROM maven:3.9.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-# Copy only Maven files first to leverage caching
-COPY pom.xml .
-COPY mvnw .
-COPY .mvn .mvn
+# Copy everything
+COPY . .
 
-# Download dependencies
-RUN mvn dependency:go-offline -B
+# Create resources directory if it doesn't exist (for Render build)
+RUN mkdir -p src/main/resources
 
-# Copy source code
-COPY src ./src
+# First compile the source code explicitly
+RUN mvn compile -DskipTests
 
-# Build the JAR
-RUN mvn clean package -DskipTests
+# Then build the package
+RUN mvn package -DskipTests
+
+# Verify the JAR contains our classes
+RUN jar tf /app/target/ChurchSoft_Backend-0.0.1-SNAPSHOT.jar | head -20
 
 # Stage 2: Run the built JAR
 FROM eclipse-temurin:17-jre-jammy
