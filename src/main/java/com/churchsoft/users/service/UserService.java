@@ -30,6 +30,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @Transactional
 @Slf4j
@@ -75,9 +78,15 @@ public class UserService {
             throw new RuntimeException("Invalid username or password");
         }
     }
-    
+
 
     public UserResponse createUser(CreateUserRequest request) {
+
+        // Default role if not provided
+        RoleName role = request.getRoleName() != null
+                ? request.getRoleName()
+                : RoleName.GUEST;
+
         var user = User.builder()
                 .firstName(request.getFirstName())
                 .imageId(request.getImageId())
@@ -88,15 +97,15 @@ public class UserService {
                 .profileImage(request.getProfileImage())
                 .phoneNumber(request.getPhoneNumber())
                 .localAssemblyName(request.getLocalAssemblyName())
-                .roleName(request.getRoleName() != null ? request.getRoleName() : RoleName.GUEST)
+                .roleName(role)
                 .status(Status.ACTIVE)
                 .build();
-        
+
         var savedUser = userRepository.save(user);
-        log.info("User created with ID: {}", savedUser.getId());
-        
+
         return mapToUserResponse(savedUser);
     }
+
     
 
     public UserResponse getUserById(Long id) {
@@ -184,9 +193,22 @@ public class UserService {
         return PageResult.from(userPage, this::mapToUserResponse);
     }
 
+    // Fetch users by assembly
+    public List<UserResponse> getUsersByAssembly(String assemblyName) {
+        List<User> users = userRepository.findByLocalAssemblyNameIgnoreCase(assemblyName);
+        return users.stream()
+                .map(this::mapToUserResponse)
+                .collect(Collectors.toList());
+    }
 
 
-
+    // Fetch users by assembly and status
+    public List<UserResponse> getUsersByAssemblyAndStatus(String assemblyName, Status status) {
+        List<User> users = userRepository.findByLocalAssemblyNameIgnoreCaseAndStatus(assemblyName, status);
+        return users.stream()
+                .map(this::mapToUserResponse)
+                .collect(Collectors.toList());
+    }
 
     // Helper Method
     private UserResponse mapToUserResponse(User user) {

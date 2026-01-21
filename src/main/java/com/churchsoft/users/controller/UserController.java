@@ -18,6 +18,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/church-soft/v1.0/users")
 @RequiredArgsConstructor
@@ -125,5 +127,19 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
+    @Operation(summary = "Get users by local assembly name")
+    @GetMapping("/assembly/{assemblyName}")
+    public ResponseEntity<List<UserResponse>> getUsersByAssembly(
+            @PathVariable("assemblyName") String assemblyName) {
+        return ResponseEntity.ok(userService.getUsersByAssembly(assemblyName));
+    }
 
+
+    @Operation(summary = "Get users by local assembly name")
+    @GetMapping("/assembly/{assemblyName}/{status}")
+    public ResponseEntity<List<UserResponse>> getUsersByAssemblyAndStatus(
+            @PathVariable("assemblyName") String assemblyName,
+            @PathVariable("status")  Status status) {
+        return ResponseEntity.ok(userService.getUsersByAssemblyAndStatus(assemblyName, status));
+    }
 }
