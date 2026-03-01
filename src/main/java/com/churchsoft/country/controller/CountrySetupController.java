@@ -28,8 +28,8 @@ public class CountrySetupController {
     }
 
     /**  Fetch all parent names by country */
-    @Operation(summary = "Fetch parent levels by country name")
-    @GetMapping("/countries/{countryName}/parents")
+    @Operation(summary = "Fetch parent(Regions) levels by country name")
+    @GetMapping("/countries/parents/{countryName}")
     public ResponseEntity<List<String>> getParentsByCountry(
             @PathVariable String countryName) {
 
@@ -39,8 +39,8 @@ public class CountrySetupController {
     }
 
     /**Fetch all child names by parent name */
-    @Operation(summary = "Fetch child levels by parent name")
-    @GetMapping("/parents/{parentName}/children")
+    @Operation(summary = "Fetch child levels(Districts) by parent name")
+    @GetMapping("/children/{parentName}")
     public ResponseEntity<List<String>> getChildrenByParent(
             @PathVariable String parentName) {
 
@@ -50,8 +50,8 @@ public class CountrySetupController {
     }
 
     /** Fetch grandChildren by child name */
-    @Operation(summary = "Fetch grand children by child name")
-    @GetMapping("/children/{childName}/grandchildren")
+    @Operation(summary = "Fetch grand children(local Assemblies) by child name(District)")
+    @GetMapping("/grandchildren/{childName}")
     public ResponseEntity<List<String>> getGrandChildrenByChild(
             @PathVariable String childName) {
 
