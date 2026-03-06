@@ -2,9 +2,7 @@ package com.churchsoft.members.service;
 
 import com.churchsoft.members.constant.MemberStatus;
 import com.churchsoft.members.constant.MinistryAffiliation;
-import com.churchsoft.members.dto.response.JurisdictionsDistributionResponse;
-import com.churchsoft.members.dto.response.NationalitySummaryResponse;
-import com.churchsoft.members.dto.response.RegionalDistributionResponse;
+import com.churchsoft.members.dto.response.*;
 import com.churchsoft.members.entity.Member;
 import com.churchsoft.members.repo.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -301,6 +301,112 @@ public class MemberServiceImpl implements MemberService {
                 })
                 .sorted((r1, r2) -> r2.getMemberCount().compareTo(r1.getMemberCount())) // Sort by count descending
                 .collect(Collectors.toList());
+    }
+
+    public Long getTotalMembers() {
+        return memberRepository.countAllMembers();
+    }
+
+    public List<BirthdayMemberDto> getMembersBirthdayThisWeek() {
+
+        LocalDate today = LocalDate.now();
+        LocalDate endOfWeek = today.plusDays(6);
+
+        int month = today.getMonthValue();
+        int startDay = today.getDayOfMonth();
+        int endDay = endOfWeek.getDayOfMonth();
+
+        List<Member> members =
+                memberRepository.findMembersBirthdayThisWeek(month, startDay, endDay);
+
+        return members.stream()
+                .map(member -> {
+
+                    LocalDate birthdayThisYear =
+                            member.getDateOfBirth().withYear(today.getYear());
+
+                    if (birthdayThisYear.isBefore(today)) {
+                        birthdayThisYear = birthdayThisYear.plusYears(1);
+                    }
+
+                    int daysRemaining =
+                            (int) ChronoUnit.DAYS.between(today, birthdayThisYear);
+
+                    int ageTurning =
+                            today.getYear() - member.getDateOfBirth().getYear();
+
+                    return BirthdayMemberDto.builder()
+                            .fullName(member.getFullName())
+                            .gender(member.getGender())
+                            .dateOfBirth(member.getDateOfBirth())
+                            .imageId(member.getImageId())
+                            .daysRemaining(daysRemaining)
+                            .ageTurning(ageTurning)
+                            .ministries(member.getMinistries())
+                            .build();
+                })
+                .sorted(Comparator.comparingInt(BirthdayMemberDto::getDaysRemaining))
+                .toList();
+    }
+    
+    public List<MinistryLeaderDto> getMinistryLeaders() {
+
+        List<Member> leaders = memberRepository.findMembersWithLeadershipRole();
+
+        return leaders.stream()
+                .map(member -> {
+
+                    Long ministryCount = 0L;
+
+                    if (member.getMinistries() != null && !member.getMinistries().isEmpty()) {
+
+                        ministryCount = member.getMinistries().stream()
+                                .map(memberRepository::countMembersByMinistry)
+                                .reduce(0L, Long::sum);
+                    }
+
+                    return MinistryLeaderDto.builder()
+                            .leaderName(member.getFullName())
+                            .leadershipRole(member.getLeadershipRole())
+                            .ministries(member.getMinistries())
+                            .ministryMemberCount(ministryCount)
+                            .build();
+                })
+                .toList();
+    }
+
+    public List<NewMemberDto> getNewMembers() {
+
+        LocalDate threeMonthsAgo = LocalDate.now().minusMonths(3);
+
+        return memberRepository.findNewMembers(threeMonthsAgo)
+                .stream()
+                .map(member -> NewMemberDto.builder()
+                        .fullName(member.getFullName())
+                        .dateJoinedChurch(member.getDateJoinedChurch())
+                        .status(member.getStatus())
+                        .build())
+                .toList();
+    }
+
+    public AssemblyLeadershipDto findMembersWithLeadershipRoleByAssembly(String assembly) {
+
+        List<Member> leaders =
+                memberRepository.findMembersWithLeadershipRoleByAssembly(assembly);
+
+        List<LeaderDto> leaderDtos =
+                leaders.stream()
+                        .map(member -> LeaderDto.builder()
+                                .name(member.getFullName())
+                                .leadershipRole(member.getLeadershipRole())
+                                .ministries(member.getMinistries())
+                                .build())
+                        .toList();
+
+        return AssemblyLeadershipDto.builder()
+                .assembly(assembly)
+                .leaders(leaderDtos)
+                .build();
     }
 
 }

@@ -37,6 +37,9 @@ public class Member {
     @Column(nullable = false)
     private String fullName;
 
+    @Column(name ="country_of_worship" )
+    private String countryOfWorship;
+
     @Column(nullable = false)
     private LocalDate dateOfBirth;
 
@@ -173,7 +176,7 @@ public class Member {
         List<Object> fieldsToCheck = Arrays.asList(
                 fullName, dateOfBirth, gender, maritalStatus, hometown, nationality,
                 phoneNumber, email, physicalAddress, status, educationalLevel,
-                occupation, baptismStatus, salvationStatus, ministryAffiliation
+                occupation, baptismStatus, salvationStatus, ministryAffiliation,countryOfWorship
         );
 
         long filled = fieldsToCheck.stream()

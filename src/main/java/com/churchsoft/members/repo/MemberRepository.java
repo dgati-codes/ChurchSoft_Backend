@@ -3,6 +3,7 @@ package com.churchsoft.members.repo;
 
 import com.churchsoft.members.constant.MemberStatus;
 import com.churchsoft.members.constant.MinistryAffiliation;
+import com.churchsoft.members.constant.MinistryGroup;
 import com.churchsoft.members.entity.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -82,4 +83,63 @@ public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecif
     Long countMembersWithJurisdiction();
 
     Optional<Member> findByUserId(Long userId);
+
+
+
+    @Query("""
+    SELECT COUNT(m)
+    FROM Member m
+    WHERE m.status <> 'VISITOR'
+    """)
+    Long countAllMembers();
+
+    @Query("""
+    SELECT m FROM Member m
+    WHERE EXTRACT(MONTH FROM m.dateOfBirth) = :month
+    AND EXTRACT(DAY FROM m.dateOfBirth) BETWEEN :startDay AND :endDay
+    """)
+    List<Member> findMembersBirthdayThisWeek(
+            @Param("month") int month,
+            @Param("startDay") int startDay,
+            @Param("endDay") int endDay
+    );
+
+
+    @Query("""
+        SELECT m
+        FROM Member m
+        WHERE m.leadershipRole IS NOT NULL
+        AND m.leadershipRole <> ''
+    """)
+    List<Member> findMembersWithLeadershipRole();
+
+    /**
+     * Count members in a ministry group
+     */
+    @Query("""
+        SELECT COUNT(m)
+        FROM Member m
+        JOIN m.ministries mg
+        WHERE mg = :ministry
+    """)
+    Long countMembersByMinistry(@Param("ministry") MinistryGroup ministry);
+
+    /**
+     * New members (joined within 3 months and not visitors)
+     */
+    @Query("""
+        SELECT m
+        FROM Member m
+        WHERE m.dateJoinedChurch >= :date
+        AND m.status <> 'VISITOR'
+    """)
+    List<Member> findNewMembers(@Param("date") LocalDate date);
+
+    @Query("""
+    SELECT m FROM Member m
+    WHERE m.assembly = :assembly
+    AND m.leadershipRole IS NOT NULL
+    AND TRIM(m.leadershipRole) <> ''
+    """)
+    List<Member> findMembersWithLeadershipRoleByAssembly(@Param("assembly") String assembly);
 }

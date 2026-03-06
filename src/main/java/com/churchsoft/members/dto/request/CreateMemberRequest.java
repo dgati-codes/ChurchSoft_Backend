@@ -13,6 +13,7 @@ public class CreateMemberRequest {
     private String fullName;
     private LocalDate dateOfBirth;
     private String gender;
+    private String countryOfWorship;
     private String maritalStatus;
     private String hometown;
     private String nationality;

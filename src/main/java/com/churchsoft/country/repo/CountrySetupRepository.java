@@ -15,4 +15,11 @@ public interface CountrySetupRepository extends JpaRepository<CountrySetup, Long
 
     @Query("select distinct c.countryName from CountrySetup c")
     List<String> findAllCountryNames();
+
+
+    Optional<CountrySetup> findByCountryName(String countryName);
+
+    void deleteByCountryName(String countryName);
+
+    boolean existsByCountryName(String countryName);
 }

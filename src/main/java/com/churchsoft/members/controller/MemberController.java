@@ -4,9 +4,7 @@ package com.churchsoft.members.controller;
 import com.churchsoft.global.dto.reponse.PageResult;
 import com.churchsoft.members.constant.MemberStatus;
 import com.churchsoft.members.constant.MinistryAffiliation;
-import com.churchsoft.members.dto.response.JurisdictionsDistributionResponse;
-import com.churchsoft.members.dto.response.NationalitySummaryResponse;
-import com.churchsoft.members.dto.response.RegionalDistributionResponse;
+import com.churchsoft.members.dto.response.*;
 import com.churchsoft.members.entity.Member;
 import com.churchsoft.members.service.MemberService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -162,4 +160,90 @@ public class MemberController {
     public ResponseEntity<List<RegionalDistributionResponse>> getRegionalDistribution() {
         return ResponseEntity.ok(memberService.getRegionalDistribution());
     }
+
+
+    @GetMapping("/total-members")
+    @Operation(
+            summary = "Retrieve total number of registered church members",
+            description = """
+                    Returns the total number of members currently registered in the system.
+                    This includes all membership statuses such as Active, Transfer, Suspended,
+                    Visitors, and Inactive members.
+                    
+                    This endpoint is commonly used for:
+                    - Church dashboard statistics
+                    - Membership growth tracking
+                    - Administrative reports
+                    """
+    )
+    public Long getTotalMembers() {
+        return memberService.getTotalMembers();
+    }
+
+    @GetMapping("/birthdays-this-week")
+    @Operation(
+            summary = "Retrieve members whose birthdays fall within the current week",
+            description = """
+                Returns a list of members whose birthdays occur within the current week.
+                
+                The response includes:
+                - Member name
+                - Gender
+                - Date of birth
+                - Image ID (profile image reference)
+                - The age the member will turn
+                - Number of days remaining until their birthday
+                - Ministries the member belongs to
+                
+                The list is sorted by the closest upcoming birthday.
+                
+                This endpoint helps church administrators:
+                - Prepare birthday announcements
+                - Plan celebrations
+                - Send birthday wishes to members.
+                """
+    )
+    public List<BirthdayMemberDto> getBirthdaysThisWeek() {
+        return memberService.getMembersBirthdayThisWeek();
+    }
+
+
+    @GetMapping("/new-members")
+    @Operation(
+            summary = "Retrieve newly joined members within the last 3 months",
+            description = """
+                    Returns a list of members who joined the church within the past three months.
+            
+                    """
+    )
+    public List<NewMemberDto> getNewMembers() {
+        return memberService.getNewMembers();
+    }
+
+    @GetMapping("/ministry-leaders/{assembly}")
+    @Operation(
+            summary = "Retrieve ministry leaders for a specific assembly",
+            description = """
+                Returns members holding leadership roles within a specific church assembly.
+                
+                The response includes:
+                - Leader name
+                - Leadership role
+                - Ministries the leader belongs to
+                
+                This endpoint helps administrators:
+                - View leadership structure within an assembly
+                - Identify ministry leaders
+                - Generate leadership reports for assemblies
+                """
+    )
+    public AssemblyLeadershipDto getMinistryLeadersByAssembly(
+            @PathVariable String assembly
+    ) {
+        return memberService.findMembersWithLeadershipRoleByAssembly(assembly);
+    }
+
+
+
 }
+

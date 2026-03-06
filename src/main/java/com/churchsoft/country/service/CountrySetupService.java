@@ -117,9 +117,6 @@ public class CountrySetupService {
                 .orElseThrow(() -> new RuntimeException("Country setup not found"));
     }
 
-    public void deleteById(Long id) {
-        repository.deleteById(id);
-    }
 
     public CountryHierarchyDto fetchByCountry(@PathVariable String countryName) {
         return CountryHierarchyMapper.toDto(
@@ -252,6 +249,22 @@ public class CountrySetupService {
         }
 
         child.setGrandChildren(String.join(", ", merged));
+    }
+
+    public void deleteById(Long id) {
+
+        CountrySetup country = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Country setup not found with id: " + id));
+
+        repository.delete(country);
+    }
+
+    public void deleteByCountryName(String countryName) {
+
+        CountrySetup country = repository.findByCountryName(countryName)
+                .orElseThrow(() -> new RuntimeException("Country setup not found with name: " + countryName));
+
+        repository.delete(country);
     }
 
 }

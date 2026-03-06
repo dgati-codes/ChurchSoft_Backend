@@ -3,9 +3,7 @@ package com.churchsoft.members.service;
 
 import com.churchsoft.members.constant.MemberStatus;
 import com.churchsoft.members.constant.MinistryAffiliation;
-import com.churchsoft.members.dto.response.JurisdictionsDistributionResponse;
-import com.churchsoft.members.dto.response.NationalitySummaryResponse;
-import com.churchsoft.members.dto.response.RegionalDistributionResponse;
+import com.churchsoft.members.dto.response.*;
 import com.churchsoft.members.entity.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,5 +31,10 @@ public interface MemberService {
     public List<Map<String, Object>> getTopAssembliesByNationality(String nationality, int topN);
     public List<RegionalDistributionResponse> getRegionalDistribution();
     Optional<Member> findByUserId(Long userId);
+    public List<NewMemberDto> getNewMembers();
+    public List<BirthdayMemberDto> getMembersBirthdayThisWeek();
+    public Long getTotalMembers();
+    public AssemblyLeadershipDto findMembersWithLeadershipRoleByAssembly(String assembly);
+
 
 }

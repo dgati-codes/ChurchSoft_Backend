@@ -90,6 +90,47 @@ public class CountrySetupController {
         return service.fetchByCountry(countryName);
     }
 
+    @DeleteMapping("/{id}")
+    @Operation(
+            summary = "Delete a country setup by ID",
+            description = """
+                    Deletes a country administrative configuration using its unique ID.
+                    
+                    This operation will also delete all related:
+                    - Parent administrative levels
+                    - Child administrative levels
+                    
+                    Example hierarchy removed:
+                    
+                    Country
+                        → Region/State (ParentLevel)
+                                → District/City (ChildLevel)
+                    
+                    This action is irreversible.
+                    """
+    )
+    public ResponseEntity<String> deleteCountryById(@PathVariable Long id) {
 
+       service.deleteById(id);
+
+        return ResponseEntity.ok("Country setup deleted successfully");
+    }
+
+    @DeleteMapping("/name/{countryName}")
+    @Operation(
+            summary = "Delete a country setup by country name",
+            description = """
+                    Deletes a country administrative configuration using the country name.
+                 
+                    """
+    )
+    public ResponseEntity<String> deleteCountryByName(
+            @PathVariable String countryName
+    ) {
+
+        service.deleteByCountryName(countryName);
+
+        return ResponseEntity.ok("Country setup deleted successfully");
+    }
 
 }
