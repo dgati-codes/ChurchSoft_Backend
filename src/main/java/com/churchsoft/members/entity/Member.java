@@ -11,7 +11,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -28,16 +27,17 @@ public class Member {
 
     @Column(name = "user_id")
     private Long userId;
+
     @Column(name = "member_id", unique = true, nullable = false)
     private String memberId;
 
     @Column(name = "image_id")
     private Long imageId;
-    // Personal & Identity Information
+
     @Column(nullable = false)
     private String fullName;
 
-    @Column(name ="country_of_worship" )
+    @Column(name = "country_of_worship")
     private String countryOfWorship;
 
     @Column(nullable = false)
@@ -87,7 +87,7 @@ public class Member {
     @Embedded
     private NextOfKin nextOfKin;
 
-    // Spiritual Journey & Church Membership
+    // Spiritual Journey
     private LocalDate dateJoinedChurch;
 
     @Enumerated(EnumType.STRING)
@@ -120,7 +120,7 @@ public class Member {
     @Enumerated(EnumType.STRING)
     private EmploymentType employmentType;
 
-    // Ministry Involvement & Skills
+    // Ministry & Skills
     @ElementCollection
     @CollectionTable(name = "member_ministries", joinColumns = @JoinColumn(name = "member_id"))
     @Enumerated(EnumType.STRING)
@@ -137,11 +137,11 @@ public class Member {
     @CollectionTable(name = "member_spiritual_gifts", joinColumns = @JoinColumn(name = "member_id"))
     private List<String> spiritualGifts;
 
-    // Welfare & Health Information
+    // Welfare & Health
     private Boolean hasHealthIssues;
     private String specialNeedsOrMedicalConditions;
 
-    // Administrative & System Data
+    // System
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -149,7 +149,6 @@ public class Member {
     private LocalDateTime updatedAt;
 
     private String createdBy;
-
     private Boolean isCompleted = false;
     private Integer page = 1;
 
@@ -169,22 +168,80 @@ public class Member {
         this.isCompleted = calculateCompletionStatus();
     }
 
-    /**
-     * Determine if member record is 70% complete
-     */
-    private boolean calculateCompletionStatus() {
-        List<Object> fieldsToCheck = Arrays.asList(
-                fullName, dateOfBirth, gender, maritalStatus, hometown, nationality,
-                phoneNumber, email, physicalAddress, status, educationalLevel,
-                occupation, baptismStatus, salvationStatus, ministryAffiliation,countryOfWorship
+    // ---------------------------------------------
+    // Weighted Completion Methods
+    // ---------------------------------------------
+    @Transient
+    public double calculateCompletionRatioWeighted() {
+
+        double filledWeight = 0;
+        double totalWeight = 0;
+
+        // Core fields (weight 3)
+        filledWeight += (fullName != null && !fullName.isBlank() ? 3 : 0);
+        filledWeight += (dateOfBirth != null ? 3 : 0);
+        filledWeight += (gender != null ? 3 : 0);
+        filledWeight += (status != null ? 3 : 0);
+        totalWeight += 12;
+
+        // Contact info (weight 3)
+        filledWeight += (phoneNumber != null && !phoneNumber.isBlank() ? 3 : 0);
+        filledWeight += (email != null && !email.isBlank() ? 3 : 0);
+        filledWeight += (physicalAddress != null && !physicalAddress.isBlank() ? 3 : 0);
+        totalWeight += 9;
+
+        // Church journey (weight 2)
+        filledWeight += (dateJoinedChurch != null ? 2 : 0);
+        filledWeight += (baptismStatus != null ? 2 : 0);
+        totalWeight += 4;
+
+        // Education & occupation (weight 1)
+        filledWeight += (occupation != null && !occupation.isBlank() ? 1 : 0);
+        filledWeight += (educationalLevel != null ? 1 : 0);
+        filledWeight += (ministryAffiliation != null ? 1 : 0);
+        totalWeight += 3;
+
+        // Embedded NextOfKin (weight 2)
+        if (nextOfKin != null) {
+            int nextFilled = nextOfKin.countFilledFields();
+            int nextTotal = nextOfKin.countFields();
+            filledWeight += ((double) nextFilled / nextTotal) * 2;
+        }
+        totalWeight += 2;
+
+        // Collections (weight 1 each)
+        List<List<?>> collections = Arrays.asList(preferredLanguages, ministries, skillsTalents, spiritualGifts);
+        for (List<?> col : collections) {
+            totalWeight += 1;
+            if (col != null && !col.isEmpty()) filledWeight += 1;
+        }
+
+        // Minor optional fields (weight 0.5)
+        List<Object> minorFields = Arrays.asList(
+                fathersName, mothersName, ethnicity, identificationType, identificationNumber,
+                profilePicture, district, assembly, jurisdiction, countryOfWorship
         );
+        for (Object f : minorFields) {
+            totalWeight += 0.5;
+            if (f != null && (!(f instanceof String) || !((String) f).isBlank())) filledWeight += 0.5;
+        }
 
-        long filled = fieldsToCheck.stream()
-                .filter(Objects::nonNull)
-                .filter(f -> !(f instanceof String) || !((String) f).isBlank())
-                .count();
+        // Boolean fields (weight 0.5)
+        List<Boolean> booleans = Arrays.asList(hasHealthIssues, consentForCommunication, whatsappAvailable);
+        for (Boolean b : booleans) {
+            totalWeight += 0.5;
+            if (b != null) filledWeight += 0.5;
+        }
 
-        double ratio = (double) filled / fieldsToCheck.size();
-        return ratio >= 0.7;
+        return totalWeight == 0 ? 0 : filledWeight / totalWeight;
+    }
+
+    @Transient
+    public int getCompletionPercentageWeighted() {
+        return (int) Math.round(calculateCompletionRatioWeighted() * 100);
+    }
+
+    private boolean calculateCompletionStatus() {
+        return calculateCompletionRatioWeighted() >= 0.8;
     }
 }

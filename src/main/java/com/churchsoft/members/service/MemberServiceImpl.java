@@ -409,4 +409,65 @@ public class MemberServiceImpl implements MemberService {
                 .build();
     }
 
+    @Override
+    public List<Member> findByUserIdAndIsCompletedFalse(Long userId) {
+        return memberRepository.findByUserIdAndIsCompletedFalse(userId);
+    }
+
+    @Override
+    public List<NewMemberDto> getVisitorsDueForReview() {
+
+        LocalDate reviewDate = LocalDate.now().minusMonths(3);
+
+        return memberRepository.findVisitorsDueForReview(reviewDate)
+                .stream()
+                .map(member -> NewMemberDto.builder()
+                        .fullName(member.getFullName())
+                        .dateJoinedChurch(member.getDateJoinedChurch())
+                        .status(member.getStatus())
+                        .build())
+                .toList();
+    }
+
+    @Override
+    public Long getPendingVisitorReviewCount() {
+
+        LocalDate reviewDate = LocalDate.now().minusMonths(3);
+
+        return memberRepository.countVisitorsDueForReview(reviewDate);
+    }
+
+    @Override
+    @Transactional
+    public void activateMember(String memberId) {
+
+        Member member = memberRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new RuntimeException("Member not found"));
+
+        member.setStatus(MemberStatus.ACTIVE);
+
+        memberRepository.save(member);
+    }
+
+    @Override
+    public List<MemberIncompleteDto> getIncompleteMembers(Long repUserId) {
+        // Fetch rep's assembly
+        String repAssembly = memberRepository.findById(repUserId)
+                .map(Member::getAssembly)
+                .orElseThrow(() -> new RuntimeException("Rep not found"));
+
+        // Fetch incomplete members in the same assembly
+        List<Member> members = memberRepository.findIncompleteMembersByAssembly(repAssembly);
+
+        return members.stream()
+                .map(m -> MemberIncompleteDto.builder()
+                        .fullName(m.getFullName())
+                        .page(m.getPage())
+                        .status(m.getStatus())
+                        .completionPercentage(m.getCompletionPercentageWeighted())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+
 }

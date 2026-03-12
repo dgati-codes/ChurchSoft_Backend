@@ -7,7 +7,9 @@ import com.churchsoft.members.dto.response.*;
 import com.churchsoft.members.entity.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +37,11 @@ public interface MemberService {
     public List<BirthdayMemberDto> getMembersBirthdayThisWeek();
     public Long getTotalMembers();
     public AssemblyLeadershipDto findMembersWithLeadershipRoleByAssembly(String assembly);
+    List<Member> findByUserIdAndIsCompletedFalse(Long userId);
+    List<NewMemberDto> getVisitorsDueForReview();
+    Long getPendingVisitorReviewCount();
+    void activateMember(String memberId);
+    List<MemberIncompleteDto> getIncompleteMembers(Long repUserId);
 
 
 }

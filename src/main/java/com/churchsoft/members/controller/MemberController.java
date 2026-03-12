@@ -8,6 +8,7 @@ import com.churchsoft.members.dto.response.*;
 import com.churchsoft.members.entity.Member;
 import com.churchsoft.members.service.MemberService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,7 +23,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/church-soft/v1.0/members")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@Tag(name = "Member Registration", description = "APIs for managing  member registrations")
 public class MemberController {
 
     private final MemberService memberService;
@@ -225,16 +226,6 @@ public class MemberController {
             summary = "Retrieve ministry leaders for a specific assembly",
             description = """
                 Returns members holding leadership roles within a specific church assembly.
-                
-                The response includes:
-                - Leader name
-                - Leadership role
-                - Ministries the leader belongs to
-                
-                This endpoint helps administrators:
-                - View leadership structure within an assembly
-                - Identify ministry leaders
-                - Generate leadership reports for assemblies
                 """
     )
     public AssemblyLeadershipDto getMinistryLeadersByAssembly(
@@ -243,7 +234,51 @@ public class MemberController {
         return memberService.findMembersWithLeadershipRoleByAssembly(assembly);
     }
 
+    @Operation(
+            summary = "Fetch visitors pending membership confirmation",
+            description = "Returns visitors who joined the church more than three months ago and require administrative confirmation."
+    )
+    @GetMapping("/review")
+    public ResponseEntity<List<NewMemberDto>> getVisitorsDueForReview() {
 
+        return ResponseEntity.ok(memberService.getVisitorsDueForReview());
+    }
+
+
+    @Operation(
+            summary = "Get count of visitors pending membership review",
+            description = "Returns the number of visitors who have stayed in the church for more than three months and require membership confirmation."
+    )
+    @GetMapping("/review/count")
+    public ResponseEntity<Long> getPendingVisitorReviewCount() {
+
+        return ResponseEntity.ok(memberService.getPendingVisitorReviewCount());
+    }
+
+
+    @Operation(
+            summary = "Confirm visitor as active church member",
+            description = "Updates a visitor's status from VISITOR to ACTIVE after administrative confirmation."
+    )
+    @PatchMapping("/{memberId}/activate")
+    public ResponseEntity<String> activateMember(@PathVariable String memberId) {
+
+        memberService.activateMember(memberId);
+
+        return ResponseEntity.ok("Member successfully activated");
+    }
+
+    @Operation(
+            summary = "Get all incomplete members by user ID",
+            description = "Retrieves all member records created by the specified user that have not yet reached the required completion threshold (less than 70% profile completion)."
+    )
+    @GetMapping("/incomplete/{repUserId}")
+    public ResponseEntity<List<Member>> getIncompleteMembers(@PathVariable Long repUserId) {
+
+        List<Member> members = memberService.findByUserIdAndIsCompletedFalse(repUserId);
+
+        return ResponseEntity.ok(members);
+    }
 
 }
 

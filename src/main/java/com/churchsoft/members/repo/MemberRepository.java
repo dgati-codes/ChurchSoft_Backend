@@ -125,14 +125,14 @@ public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecif
     Long countMembersByMinistry(@Param("ministry") MinistryGroup ministry);
 
     /**
-     * New members (joined within 3 months and not visitors)
+     * New visitors (joined within 3 months)
      */
     @Query("""
-        SELECT m
-        FROM Member m
-        WHERE m.dateJoinedChurch >= :date
-        AND m.status <> 'VISITOR'
-    """)
+    SELECT m
+    FROM Member m
+    WHERE m.dateJoinedChurch >= :date
+    AND m.status = 'VISITOR'
+""")
     List<Member> findNewMembers(@Param("date") LocalDate date);
 
     @Query("""
@@ -142,4 +142,37 @@ public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecif
     AND TRIM(m.leadershipRole) <> ''
     """)
     List<Member> findMembersWithLeadershipRoleByAssembly(@Param("assembly") String assembly);
+
+    List<Member> findByUserIdAndIsCompletedFalse(Long userId);
+
+    /**
+     * Visitors whose membership needs admin review (older than 3 months)
+     */
+    @Query("""
+        SELECT m
+        FROM Member m
+        WHERE m.status = 'VISITOR'
+        AND m.dateJoinedChurch <= :reviewDate
+    """)
+    List<Member> findVisitorsDueForReview(@Param("reviewDate") LocalDate reviewDate);
+
+
+    /**
+     * Count visitors requiring membership review
+     */
+    @Query("""
+        SELECT COUNT(m)
+        FROM Member m
+        WHERE m.status = 'VISITOR'
+        AND m.dateJoinedChurch <= :reviewDate
+    """)
+    Long countVisitorsDueForReview(@Param("reviewDate") LocalDate reviewDate);
+
+    @Query("""
+        SELECT m
+        FROM Member m
+        WHERE m.assembly = :assembly
+          AND m.isCompleted = false
+    """)
+    List<Member> findIncompleteMembersByAssembly(@Param("assembly") String assembly);
 }
