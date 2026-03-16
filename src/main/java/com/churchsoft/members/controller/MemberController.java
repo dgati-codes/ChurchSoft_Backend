@@ -4,10 +4,12 @@ package com.churchsoft.members.controller;
 import com.churchsoft.global.dto.reponse.PageResult;
 import com.churchsoft.members.constant.MemberStatus;
 import com.churchsoft.members.constant.MinistryAffiliation;
+import com.churchsoft.members.dto.request.MemberCompletionDTO;
 import com.churchsoft.members.dto.response.*;
 import com.churchsoft.members.entity.Member;
 import com.churchsoft.members.service.MemberService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -267,16 +269,16 @@ public class MemberController {
 
         return ResponseEntity.ok("Member successfully activated");
     }
-
+    @GetMapping("/incomplete")
     @Operation(
-            summary = "Get all incomplete members by user ID",
-            description = "Retrieves all member records created by the specified user that have not yet reached the required completion threshold (less than 70% profile completion)."
+            summary = "Get incomplete members by creator",
+            description = "Returns members whose 'isCompleted' flag is false, filtered by the 'createdBy' field (case-insensitive). Includes id, name, email, created date, last updated, memberId, isCompleted status, and completion percentage."
     )
-    @GetMapping("/incomplete/{repUserId}")
-    public ResponseEntity<List<Member>> getIncompleteMembers(@PathVariable Long repUserId) {
+    public ResponseEntity<List<MemberCompletionDTO>> getIncompleteMembers(
+            @Parameter(description = "Creator username (case-insensitive)")
+            @RequestParam String createdBy) {
 
-        List<Member> members = memberService.findByUserIdAndIsCompletedFalse(repUserId);
-
+        List<MemberCompletionDTO> members = memberService.getIncompleteMembersByCreator(createdBy);
         return ResponseEntity.ok(members);
     }
 

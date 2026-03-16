@@ -2,6 +2,7 @@ package com.churchsoft.members.service;
 
 import com.churchsoft.members.constant.MemberStatus;
 import com.churchsoft.members.constant.MinistryAffiliation;
+import com.churchsoft.members.dto.request.MemberCompletionDTO;
 import com.churchsoft.members.dto.response.*;
 import com.churchsoft.members.entity.Member;
 import com.churchsoft.members.repo.MemberRepository;
@@ -409,10 +410,6 @@ public class MemberServiceImpl implements MemberService {
                 .build();
     }
 
-    @Override
-    public List<Member> findByUserIdAndIsCompletedFalse(Long userId) {
-        return memberRepository.findByUserIdAndIsCompletedFalse(userId);
-    }
 
     @Override
     public List<NewMemberDto> getVisitorsDueForReview() {
@@ -450,22 +447,19 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
-    public List<MemberIncompleteDto> getIncompleteMembers(Long repUserId) {
-        // Fetch rep's assembly
-        String repAssembly = memberRepository.findById(repUserId)
-                .map(Member::getAssembly)
-                .orElseThrow(() -> new RuntimeException("Rep not found"));
-
-        // Fetch incomplete members in the same assembly
-        List<Member> members = memberRepository.findIncompleteMembersByAssembly(repAssembly);
-
+    public List<MemberCompletionDTO> getIncompleteMembersByCreator(String createdBy) {
+        List<Member> members = memberRepository.findByCreatedByIgnoreCaseAndIsCompletedFalse(createdBy);
         return members.stream()
-                .map(m -> MemberIncompleteDto.builder()
-                        .fullName(m.getFullName())
-                        .page(m.getPage())
-                        .status(m.getStatus())
-                        .completionPercentage(m.getCompletionPercentageWeighted())
-                        .build())
+                .map(m -> new MemberCompletionDTO(
+                        m.getId(),
+                        m.getFullName(),
+                        m.getEmail(),
+                        m.getCreatedAt(),
+                        m.getUpdatedAt(),
+                        m.getMemberId(),
+                        m.getIsCompleted(),
+                        m.getCompletionPercentageWeighted()
+                ))
                 .collect(Collectors.toList());
     }
 

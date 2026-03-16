@@ -168,11 +168,5 @@ public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecif
     """)
     Long countVisitorsDueForReview(@Param("reviewDate") LocalDate reviewDate);
 
-    @Query("""
-        SELECT m
-        FROM Member m
-        WHERE m.assembly = :assembly
-          AND m.isCompleted = false
-    """)
-    List<Member> findIncompleteMembersByAssembly(@Param("assembly") String assembly);
+    List<Member> findByCreatedByIgnoreCaseAndIsCompletedFalse(String createdBy);
 }
