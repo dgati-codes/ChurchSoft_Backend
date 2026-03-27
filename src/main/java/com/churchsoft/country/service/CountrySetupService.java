@@ -267,4 +267,30 @@ public class CountrySetupService {
         repository.delete(country);
     }
 
+    public List<String> getAllGrandChildrenByCountryName(String countryName) {
+
+        CountrySetup country = countryRepo
+                .findByCountryNameIgnoreCase(countryName)
+                .orElseThrow(() -> new RuntimeException("Country not found"));
+
+        return country.getParents().stream()
+                .flatMap(parent -> parent.getChildren().stream())
+                .map(ChildLevel::getGrandChildren)
+                .filter(Objects::nonNull)
+                .flatMap(gc -> Arrays.stream(gc.split(",")))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
+    }
+/*    public List<String> getGrandChildrenByCountry(String countryName) {
+        List<String> results = childRepo.findAllGrandChildrenByCountryName(countryName);
+
+        // Optional: flatten comma-separated grandChildren into a list
+        return results.stream()
+                .filter(Objects::nonNull)
+                .flatMap(gc -> Arrays.stream(gc.split(",")))
+                .map(String::trim)
+                .toList();
+    }*/
 }

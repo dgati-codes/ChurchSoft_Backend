@@ -1,11 +1,14 @@
 package com.churchsoft.members.service;
 
+import com.churchsoft.members.constant.Gender;
 import com.churchsoft.members.constant.MemberStatus;
 import com.churchsoft.members.constant.MinistryAffiliation;
 import com.churchsoft.members.dto.request.MemberCompletionDTO;
 import com.churchsoft.members.dto.response.*;
 import com.churchsoft.members.entity.Member;
 import com.churchsoft.members.repo.MemberRepository;
+import com.churchsoft.members.repo.projection.*;
+import com.churchsoft.members.util.DashboardUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -14,9 +17,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.churchsoft.members.constant.MinistryAffiliation.*;
+
 
 @Service
 @RequiredArgsConstructor
@@ -255,26 +263,10 @@ public class MemberServiceImpl implements MemberService {
         return response;
     }
 
-    public List<Map<String, Object>> getTopAssembliesByNationality(String nationality, int topN) {
-        long totalNationalityCount = memberRepository.countTotalByNationality(nationality);
-        List<Object[]> results = memberRepository.countByAssemblyForNationalityWithDistrict(nationality);
 
-        return results.stream()
-                .limit(topN)
-                .map(r -> {
-                    String assembly = (String) r[0];
-                    String district = (String) r[1];
-                    long count = ((Number) r[2]).longValue();
-                    double percentage = totalNationalityCount == 0 ? 0 : (count * 100.0 / totalNationalityCount);
-
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("assembly", assembly);
-                    map.put("district", district);
-                    map.put("count", count);
-                    map.put("percentage", Math.round(percentage * 100.0) / 100.0); // 2 decimals
-                    return map;
-                })
-                .toList();
+    private double calculateGrowth(long current, long previous) {
+        if (previous == 0) return current == 0 ? 0 : 100;
+        return Math.round(((current - previous) * 100.0 / previous) * 10.0) / 10.0;
     }
 
     public List<RegionalDistributionResponse> getRegionalDistribution() {
@@ -462,6 +454,336 @@ public class MemberServiceImpl implements MemberService {
                 ))
                 .collect(Collectors.toList());
     }
+
+
+    @Override
+    public List<DashboardCardDTO> getDashboardCards() {
+
+        LocalDate today = LocalDate.now();
+
+        LocalDateTime start = today.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime end = today.atTime(23,59,59);
+
+        LocalDate lastMonth = today.minusMonths(1);
+        LocalDateTime prevStart = lastMonth.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime prevEnd = lastMonth.atTime(23,59,59);
+
+        List<DashboardStatsProjection> stats =
+                memberRepository.getDashboardStats(start, end, prevStart, prevEnd);
+
+        Map<MinistryAffiliation, DashboardStatsProjection> map =
+                stats.stream().collect(Collectors.toMap(
+                        DashboardStatsProjection::getAffiliation,
+                        s -> s
+                ));
+
+        return List.of(
+                buildCard("Children", CHILDREN, map),
+                buildCard("Junior Youth", JUNIOR_YOUTH, map),
+                buildCard("Senior Youth", SENIOR_YOUTH, map),
+                buildAdultsCard(map),
+                buildTotalCard(stats)
+        );
+    }
+
+    private DashboardCardDTO buildCard(String label,
+                                       MinistryAffiliation affiliation,
+                                       Map<MinistryAffiliation, DashboardStatsProjection> map) {
+
+        DashboardStatsProjection s = map.get(affiliation);
+
+        long total = s == null ? 0 : safe(s.getTotal());
+        long current = s == null ? 0 : safe(s.getCurrent());
+        long previous = s == null ? 0 : safe(s.getPrevious());
+
+        return DashboardCardDTO.builder()
+                .label(label)
+                .count(total)
+                .percentageChange(calculatePercentageChange(current, previous))
+                .build();
+    }
+
+    private DashboardCardDTO buildAdultsCard(
+            Map<MinistryAffiliation, DashboardStatsProjection> map) {
+
+        DashboardStatsProjection men = map.get(MEN);
+        DashboardStatsProjection women = map.get(WOMEN);
+
+        long total =
+                (men == null ? 0 : men.getTotal()) +
+                        (women == null ? 0 : women.getTotal());
+
+        long current =
+                (men == null ? 0 : men.getCurrent()) +
+                        (women == null ? 0 : women.getCurrent());
+
+        long previous =
+                (men == null ? 0 : men.getPrevious()) +
+                        (women == null ? 0 : women.getPrevious());
+
+        return DashboardCardDTO.builder()
+                .label("Adults")
+                .count(total)
+                .percentageChange(calculatePercentageChange(current, previous))
+                .build();
+    }
+
+    private DashboardCardDTO buildTotalCard(List<DashboardStatsProjection> stats) {
+
+        long total = stats.stream()
+                .mapToLong(s -> safe(s.getTotal()))
+                .sum();
+
+        long current = stats.stream()
+                .mapToLong(s -> safe(s.getCurrent()))
+                .sum();
+
+        long previous = stats.stream()
+                .mapToLong(s -> safe(s.getPrevious()))
+                .sum();
+
+        return DashboardCardDTO.builder()
+                .label("Total Members")
+                .count(total)
+                .percentageChange(calculatePercentageChange(current, previous))
+                .build();
+    }
+
+    private double calculatePercentageChange(long current, long previous) {
+        if (previous == 0) return current == 0 ? 0 : 100;
+        return ((double) (current - previous) / previous) * 100;
+    }
+
+    private long safe(Long v) {
+        return v == null ? 0 : v;
+    }
+
+
+
+    @Override
+    public TrendResponseDTO getRegistrationTrend(
+            LocalDateTime startDate,
+            String country,
+            String region,
+            String district,
+            String local
+    ) {
+
+        // start of current year if not provided
+        if (startDate == null) {
+            startDate = LocalDate.now()
+                    .withDayOfYear(1)
+                    .atStartOfDay();
+        }
+
+        List<Object[]> results = memberRepository
+                .getMonthlyTrend(startDate, country, region, district, local);
+
+        Map<Integer, Long> map = results.stream()
+                .collect(Collectors.toMap(
+                        r -> ((Number) r[0]).intValue(),
+                        r -> (Long) r[1]
+                ));
+
+        List<MonthlyTrendDTO> monthly = new ArrayList<>();
+        long total = 0;
+
+        for (int i = 1; i <= 12; i++) {
+            long count = map.getOrDefault(i, 0L);
+            total += count;
+
+            monthly.add(MonthlyTrendDTO.builder()
+                    .month(Month.of(i).name().substring(0, 3))
+                    .count(count)
+                    .build());
+        }
+
+        return new TrendResponseDTO(monthly, total);
+    }
+
+    @Override
+    public List<AgeDistributionDTO> getAgeDistribution(String country) {
+
+        Map<MinistryAffiliation, Long> map =
+                memberRepository.getAgeDistribution(country)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                AffiliationCountProjection::getAffiliation,
+                                AffiliationCountProjection::getCount
+                        ));
+
+        return List.of(
+                new AgeDistributionDTO("Children", safe(map.get(CHILDREN))),
+                new AgeDistributionDTO("Junior Youth", safe(map.get(JUNIOR_YOUTH))),
+                new AgeDistributionDTO("Senior Youth", safe(map.get(SENIOR_YOUTH))),
+                new AgeDistributionDTO("Adults",
+                        safe(map.get(MEN)) + safe(map.get(WOMEN)))
+        );
+    }
+
+
+    @Override
+    public List<GenderBreakdownDTO> getGenderBreakdown(String country) {
+
+        Map<String, GenderBreakdownDTO> map = initGenderGroups();
+
+        for (GenderBreakdownProjection r :
+                memberRepository.getGenderBreakdown(country)) {
+
+            String group = DashboardUtils.mapAffiliationToGroup(r.getAffiliation());
+            GenderBreakdownDTO dto = map.get(group);
+
+            if (r.getGender() == Gender.MALE)
+                dto.setMale(dto.getMale() + r.getCount());
+            else
+                dto.setFemale(dto.getFemale() + r.getCount());
+        }
+
+        return new ArrayList<>(map.values());
+    }
+
+    private Map<String, GenderBreakdownDTO> initGenderGroups() {
+
+        Map<String, GenderBreakdownDTO> map = new LinkedHashMap<>();
+
+        map.put("Children", new GenderBreakdownDTO("Children", 0L, 0L));
+        map.put("Junior Youth", new GenderBreakdownDTO("Junior Youth", 0L, 0L));
+        map.put("Senior Youth", new GenderBreakdownDTO("Senior Youth", 0L, 0L));
+        map.put("Adults", new GenderBreakdownDTO("Adults", 0L, 0L));
+
+        return map;
+    }
+
+    @Override
+    public RegionalSummaryDTO getRegionalSummary(String country) {
+
+        List<MemberDistributionDto> regions = memberRepository.getRegionDistribution(country)
+                .stream()
+                .map(r -> MemberDistributionDto.builder()
+                        .region(r.getRegion())
+                        .count(r.getCount())
+                        .build())
+                .toList();
+
+        CoverageProjection result = memberRepository.getCoverageStats(country);
+
+        CoverageDTO coverage = CoverageDTO.builder()
+                .regions(safe(result.getRegions()))
+                .districts(safe(result.getDistricts()))
+                .locals(safe(result.getLocals()))
+                .build();
+
+        return RegionalSummaryDTO.builder()
+                .regions(regions)
+                .coverage(coverage)
+                .build();
+    }
+
+    @Override
+    public List<LocalBreakdownDTO> getLocalBreakdown(String country) {
+
+        Map<String, LocalBreakdownDTO> grouped = new HashMap<>();
+
+        for (LocalBreakdownProjection row :
+                memberRepository.getLocalBreakdown(country)) {
+
+            String key = row.getRegion()+"|"+row.getDistrict()+"|"+row.getAssembly();
+
+            grouped.putIfAbsent(key,
+                    LocalBreakdownDTO.builder()
+                            .region(row.getRegion())
+                            .district(row.getDistrict())
+                            .local(row.getAssembly())
+                            .children(0L)
+                            .juniorYouth(0L)
+                            .seniorYouth(0L)
+                            .adults(0L)
+                            .total(0L)
+                            .build()
+            );
+
+            LocalBreakdownDTO dto = grouped.get(key);
+
+            switch (row.getAffiliation()) {
+                case CHILDREN -> dto.setChildren(dto.getChildren()+row.getCount());
+                case JUNIOR_YOUTH -> dto.setJuniorYouth(dto.getJuniorYouth()+row.getCount());
+                case SENIOR_YOUTH -> dto.setSeniorYouth(dto.getSeniorYouth()+row.getCount());
+                case MEN, WOMEN -> dto.setAdults(dto.getAdults()+row.getCount());
+            }
+
+            dto.setTotal(dto.getTotal()+row.getCount());
+        }
+
+        return new ArrayList<>(grouped.values());
+    }
+
+    @Override
+    public List<TopGrowingAssemblyDTO> getTopGrowingAssemblies(String country, int topN) {
+
+        int currentYear = LocalDate.now().getYear();
+        int previousYear = currentYear - 1;
+
+        List<Object[]> results = memberRepository.getAssemblyYearlyGrowth(
+                country, currentYear, previousYear
+        );
+
+        return results.stream()
+                .map(r -> {
+
+                    String assembly = (String) r[0];
+                    String district = (String) r[1];
+
+                    long current = ((Number) r[2]).longValue();
+                    long previous = ((Number) r[3]).longValue();
+                    long total = ((Number) r[4]).longValue();
+
+                    double growth = calculateGrowth(current, previous);
+
+                    return TopGrowingAssemblyDTO.builder()
+                            .assembly(assembly)
+                            .district(district)
+                            .totalMembers(total)
+                            .growthPercentage(growth)
+                            .build();
+                })
+                .sorted(Comparator.comparing(TopGrowingAssemblyDTO::getGrowthPercentage).reversed())
+                .limit(topN)
+                .toList();
+    }
+
+   /* @Override
+    public List<InactiveLocalDTO> getInactiveLocals(String country, int topN) {
+
+        List<Object[]> results = memberRepository.getAssemblyLastActivity(country);
+
+        LocalDateTime now = LocalDateTime.now();
+
+        return results.stream()
+                .map(r -> {
+
+                    String assembly = (String) r[0];
+                    String district = (String) r[1];
+                    long total = ((Number) r[2]).longValue();
+                    LocalDateTime lastActivity = (LocalDateTime) r[3];
+
+                    long monthsInactive = ChronoUnit.MONTHS.between(lastActivity, now);
+
+                    return InactiveLocalDTO.builder()
+                            .assembly(assembly)
+                            .district(district)
+                            .totalMembers(total)
+                            .lastActivityDate(lastActivity)
+                            .monthsInactive(monthsInactive)
+                            .build();
+                })
+                .sorted(Comparator.comparing(InactiveLocalDTO::getMonthsInactive).reversed())
+                .limit(topN)
+                .toList();
+    }*/
+
+
+
+
 
 
 }

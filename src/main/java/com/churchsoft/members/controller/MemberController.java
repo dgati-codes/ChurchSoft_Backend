@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -144,19 +145,6 @@ public class MemberController {
         return memberService.getJurisdictionDistributionByNationality(nationality);
     }
 
-    @Operation(summary = "Total Coverage by Nationality")
-    @GetMapping("/summary/coverage/nationality/{nationality}")
-    public Map<String, Object> getTotalCoverageByNationality(@PathVariable String nationality) {
-        return memberService.getTotalCoverageByNationality(nationality);
-    }
-
-    @GetMapping("/top-five-growing-church")
-    @Operation(summary = "Get top N assemblies for a nationality with count and percentage")
-    public ResponseEntity<List<Map<String, Object>>> getTopAssembliesByNationality(
-            @RequestParam String nationality,
-            @RequestParam(defaultValue = "5") int topN) {
-        return ResponseEntity.ok(memberService.getTopAssembliesByNationality(nationality, topN));
-    }
 
     @GetMapping("/regional-distribution")
     @Operation(summary = "Get regional distribution of members using jurisdiction field")
@@ -282,5 +270,96 @@ public class MemberController {
         return ResponseEntity.ok(members);
     }
 
+
+    @GetMapping("/dashboard/cards")
+    public ResponseEntity<List<DashboardCardDTO>> getDashboardCards() {
+        return ResponseEntity.ok(memberService.getDashboardCards());
+    }
+
+    @GetMapping("/dashboard/trends")
+    public ResponseEntity<TrendResponseDTO> getTrend(
+            @RequestParam String country,
+            @RequestParam(required = false) LocalDateTime startDate,
+            @RequestParam(required = false) String region,
+            @RequestParam(required = false) String district,
+            @RequestParam(required = false) String local
+    ) {
+        return ResponseEntity.ok(
+                memberService.getRegistrationTrend(
+                        startDate, country, region, district, local
+                )
+        );
+    }
+
+    @GetMapping("/dashboard/age-distribution")
+    public ResponseEntity<List<AgeDistributionDTO>> getAgeDistribution(
+            @RequestParam String country
+    ) {
+        return ResponseEntity.ok(
+                memberService.getAgeDistribution(country)
+        );
+    }
+
+    @GetMapping("/dashboard/gender-breakdown")
+    @Operation(summary = "Get gender breakdown by country")
+    public ResponseEntity<List<GenderBreakdownDTO>> getGenderBreakdown(
+            @RequestParam String country
+    ) {
+        return ResponseEntity.ok(
+                memberService.getGenderBreakdown(country)
+        );
+    }
+
+    @GetMapping("/dashboard/regional-summary")
+    @Operation(
+            summary = "Get regional distribution and coverage by country",
+            description = "Returns member distribution by region along with total coverage (regions, districts, locals) for a given country."
+    )
+    public ResponseEntity<RegionalSummaryDTO> getRegionalSummary(
+            @RequestParam String country
+    ) {
+        return ResponseEntity.ok(
+                memberService.getRegionalSummary(country)
+        );
+    }
+
+
+    @GetMapping("/dashboard/local-breakdown")
+    @Operation(
+            summary = "Get local breakdown by country",
+            description = "Returns hierarchical breakdown (region → district → local) including ministry-based age distribution."
+    )
+    public ResponseEntity<List<LocalBreakdownDTO>> getLocalBreakdown(
+            @RequestParam String country
+    ) {
+        return ResponseEntity.ok(
+                memberService.getLocalBreakdown(country)
+        );
+    }
+
+    @GetMapping("/dashboard/top-growing-locals")
+    public ResponseEntity<List<TopGrowingAssemblyDTO>> getTopGrowingAssemblies(
+            @RequestParam String country,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(defaultValue = "5") int topN
+    ) {
+        return ResponseEntity.ok(
+                memberService.getTopGrowingAssemblies(country, topN)
+        );
+    }
+
+/*    @GetMapping("/dashboard/inactive-locals")
+    @Operation(
+            summary = "Get inactive assemblies",
+            description = "Returns assemblies with longest inactivity (based on last member registration date) for a given country."
+    )
+    public ResponseEntity<List<InactiveLocalDTO>> getInactiveLocals(
+            @RequestParam String country,
+            @RequestParam(defaultValue = "5") int topN
+    ) {
+        return ResponseEntity.ok(
+                memberService.getInactiveLocals(country, topN)
+        );
+    }*/
 }
 

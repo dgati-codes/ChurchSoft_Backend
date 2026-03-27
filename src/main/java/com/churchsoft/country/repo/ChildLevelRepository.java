@@ -3,6 +3,7 @@ package com.churchsoft.country.repo;
 import com.churchsoft.country.entity.ChildLevel;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -19,4 +20,13 @@ public interface ChildLevelRepository extends JpaRepository<ChildLevel, Long> {
     List<String> findChildNamesByParent(String parentName);
 
     Optional<ChildLevel> findByChildNameIgnoreCase(String childName);
+
+    @Query("""
+        SELECT c.grandChildren 
+        FROM ChildLevel c
+        JOIN c.parent p
+        JOIN p.country co
+        WHERE co.countryName = :countryName
+    """)
+    List<String> findAllGrandChildrenByCountryName(@Param("countryName") String countryName);
 }

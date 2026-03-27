@@ -5,6 +5,8 @@ import com.churchsoft.country.entity.CountrySetup;
 import com.churchsoft.country.mapper.CountryHierarchyMapper;
 import com.churchsoft.country.service.CountrySetupService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -133,4 +135,17 @@ public class CountrySetupController {
         return ResponseEntity.ok("Country setup deleted successfully");
     }
 
+    @GetMapping("/local-assemblies-by/{countryName}")
+    @Operation(summary = "Get all grandchildren(Local Assemblies) by country name (case insensitive)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Grandchildren retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Country not found")
+    })
+    public ResponseEntity<List<String>> getGrandChildren(
+            @PathVariable String countryName
+    ) {
+        List<String> result = service.getAllGrandChildrenByCountryName(countryName);
+        return ResponseEntity.ok(result);
+    }
 }
+

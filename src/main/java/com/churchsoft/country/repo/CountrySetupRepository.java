@@ -22,4 +22,5 @@ public interface CountrySetupRepository extends JpaRepository<CountrySetup, Long
     void deleteByCountryName(String countryName);
 
     boolean existsByCountryName(String countryName);
+
 }

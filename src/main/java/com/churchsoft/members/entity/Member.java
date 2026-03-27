@@ -13,8 +13,24 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+
+@Table(
+        name = "members",
+        indexes = {
+                @Index(name = "idx_member_created_at", columnList = "created_at"),
+                @Index(name = "idx_member_ministry", columnList = "ministryAffiliation"),
+                @Index(name = "idx_member_gender", columnList = "gender"),
+                @Index(name = "idx_member_region", columnList = "jurisdiction"),
+                @Index(name = "idx_member_district", columnList = "district"),
+                @Index(name = "idx_member_local", columnList = "assembly"),
+                @Index(name = "idx_member_country", columnList = "country_of_worship"),
+                @Index(
+                        name="idx_member_dashboard",
+                        columnList="country_of_worship,created_at,jurisdiction,district,assembly"
+                )
+        }
+)
 @Entity
-@Table(name = "members")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

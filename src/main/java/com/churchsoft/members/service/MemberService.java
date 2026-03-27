@@ -9,8 +9,8 @@ import com.churchsoft.members.entity.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 public interface MemberService {
@@ -28,8 +28,7 @@ public interface MemberService {
     Member updateMemberPage(String memberId, Integer page);
     public NationalitySummaryResponse getSummaryByNationality(String nationality);
     public JurisdictionsDistributionResponse getJurisdictionDistributionByNationality(String nationality);
-    public Map<String, Object> getTotalCoverageByNationality(String nationality);
-    public List<Map<String, Object>> getTopAssembliesByNationality(String nationality, int topN);
+    List<TopGrowingAssemblyDTO> getTopGrowingAssemblies(String country, int topN);
     public List<RegionalDistributionResponse> getRegionalDistribution();
     Optional<Member> findByUserId(Long userId);
     public List<NewMemberDto> getNewMembers();
@@ -41,5 +40,24 @@ public interface MemberService {
     void activateMember(String memberId);
     List<MemberCompletionDTO> getIncompleteMembersByCreator(String createdBy);
 
+
+    List<DashboardCardDTO> getDashboardCards();
+
+    public TrendResponseDTO getRegistrationTrend(
+            LocalDateTime startDate,
+            String country,
+            String region,
+            String district,
+            String local
+    );
+
+    List<AgeDistributionDTO> getAgeDistribution(String country);
+
+    List<GenderBreakdownDTO> getGenderBreakdown(String country);
+
+    RegionalSummaryDTO getRegionalSummary(String country);
+
+    List<LocalBreakdownDTO> getLocalBreakdown(String country);
+    //List<InactiveLocalDTO> getInactiveLocals(String country, int topN);
 
 }
